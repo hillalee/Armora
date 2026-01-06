@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Armora - Quantum-Resistant Ethernet Bridge Demo</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="logo">
+                <div class="logo-icon">🛡️</div>
+                <div class="logo-text">
+                    <h1>ARMORA</h1>
+                    <span class="tagline">Quantum-Resistant Ethernet Bridge</span>
+                </div>
+            </div>
+            <div class="status-indicator" id="statusIndicator">
+                <span class="status-dot"></span>
+                <span class="status-text">Disconnected</span>
+            </div>
+        </header>
+
+        <!-- Navigation Tabs -->
+        <nav class="tabs">
+            <button class="tab active" data-tab="dashboard">Dashboard</button>
+            <button class="tab" data-tab="packets">Packet Viewer</button>
+            <button class="tab" data-tab="chat">Chat Demo</button>
+            <button class="tab" data-tab="files">File Transfer</button>
+            <button class="tab" data-tab="benchmarks">Benchmarks</button>
+        </nav>
+
+        <!-- Dashboard Tab -->
+        <section class="tab-content active" id="dashboard">
+            <div class="dashboard-grid">
+                <!-- Bridge Control -->
+                <div class="card control-card">
+                    <h2>Bridge Control</h2>
+                    <div class="form-group">
+                        <label>Input Interface</label>
+                        <input type="text" id="inputInterface" value="veth0" placeholder="eth0">
+                    </div>
+                    <div class="form-group">
+                        <label>Output Interface</label>
+                        <input type="text" id="outputInterface" value="veth1" placeholder="eth1">
+                    </div>
+                    <div class="form-group">
+                        <label>Pre-Shared Key (hex)</label>
+                        <input type="text" id="pskKey" placeholder="64 hex characters">
+                        <button class="btn-small" onclick="generateKey()">Generate</button>
+                    </div>
+                    <div class="button-group">
+                        <button class="btn btn-primary" id="startBtn" onclick="startBridge()">
+                            Start Bridge
+                        </button>
+                        <button class="btn btn-danger" id="stopBtn" onclick="stopBridge()" disabled>
+                            Stop Bridge
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Stats Cards -->
+                <div class="card stats-card">
+                    <h2>Encryption Stats</h2>
+                    <div class="stat-grid">
+                        <div class="stat">
+                            <span class="stat-value" id="packetsEnc">0</span>
+                            <span class="stat-label">Packets Encrypted</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-value" id="bytesEnc">0 B</span>
+                            <span class="stat-label">Bytes Encrypted</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card stats-card">
+                    <h2>Decryption Stats</h2>
+                    <div class="stat-grid">
+                        <div class="stat">
+                            <span class="stat-value" id="packetsDec">0</span>
+                            <span class="stat-label">Packets Decrypted</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-value" id="bytesDec">0 B</span>
+                            <span class="stat-label">Bytes Decrypted</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Crypto Info -->
+                <div class="card info-card">
+                    <h2>Cryptographic Configuration</h2>
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <span class="info-label">Key Exchange</span>
+                            <span class="info-value">Kyber1024 (ML-KEM)</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Encryption</span>
+                            <span class="info-value">AES-256-GCM</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Security Level</span>
+                            <span class="info-value quantum">Quantum-Resistant</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Overhead</span>
+                            <span class="info-value">28 bytes/packet</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Activity Log -->
+                <div class="card log-card">
+                    <h2>Activity Log</h2>
+                    <div class="log-container" id="logContainer">
+                        <div class="log-entry info">Demo mode ready. Click "Start Bridge" to begin.</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Packet Viewer Tab -->
+        <section class="tab-content" id="packets">
+            <div class="packet-viewer">
+                <div class="packet-header">
+                    <h2>Live Packet Capture</h2>
+                    <div class="packet-controls">
+                        <label>
+                            <input type="checkbox" id="autoscroll" checked>
+                            Auto-scroll
+                        </label>
+                        <button class="btn-small" onclick="clearPackets()">Clear</button>
+                    </div>
+                </div>
+                <div class="packet-list" id="packetList">
+                    <div class="packet-placeholder">
+                        Start the bridge to see live packets...
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Chat Demo Tab -->
+        <section class="tab-content" id="chat">
+            <div class="chat-demo">
+                <div class="chat-info">
+                    <h2>Encrypted Chat Demo</h2>
+                    <p>Messages are encrypted with AES-256-GCM before transmission.</p>
+                </div>
+                <div class="chat-columns">
+                    <div class="chat-column">
+                        <h3>📤 Sender Side</h3>
+                        <div class="chat-box" id="chatSender">
+                            <div class="chat-messages" id="senderMessages"></div>
+                            <div class="chat-input">
+                                <input type="text" id="chatInput" placeholder="Type a message..." 
+                                       onkeypress="if(event.key==='Enter')sendChat()">
+                                <button class="btn btn-primary" onclick="sendChat()">Send</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="chat-column encrypted">
+                        <h3>🔒 Encrypted (Wire)</h3>
+                        <div class="chat-box" id="chatEncrypted">
+                            <div class="chat-messages" id="encryptedMessages"></div>
+                        </div>
+                    </div>
+                    <div class="chat-column">
+                        <h3>📥 Receiver Side</h3>
+                        <div class="chat-box" id="chatReceiver">
+                            <div class="chat-messages" id="receiverMessages"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- File Transfer Tab -->
+        <section class="tab-content" id="files">
+            <div class="file-transfer">
+                <h2>Encrypted File Transfer</h2>
+                <p>Files are encrypted and transmitted through the bridge.</p>
+                
+                <div class="file-upload">
+                    <input type="file" id="fileInput" onchange="handleFileSelect(event)">
+                    <label for="fileInput" class="file-label">
+                        <span class="file-icon">📁</span>
+                        <span>Drop file here or click to select</span>
+                    </label>
+                </div>
+                
+                <div class="file-progress" id="fileProgress" style="display: none;">
+                    <div class="file-info">
+                        <span class="file-name" id="fileName"></span>
+                        <span class="file-size" id="fileSize"></span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progressFill"></div>
+                    </div>
+                    <div class="progress-text" id="progressText">0%</div>
+                </div>
+                
+                <div class="transfer-history" id="transferHistory">
+                    <h3>Transfer History</h3>
+                    <div class="history-list" id="historyList"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Benchmarks Tab -->
+        <section class="tab-content" id="benchmarks">
+            <div class="benchmarks">
+                <h2>Performance Benchmarks</h2>
+                
+                <div class="benchmark-grid">
+                    <div class="benchmark-card">
+                        <h3>Latency</h3>
+                        <div class="benchmark-value" id="latencyValue">--</div>
+                        <div class="benchmark-unit">milliseconds</div>
+                        <div class="benchmark-chart" id="latencyChart"></div>
+                    </div>
+                    
+                    <div class="benchmark-card">
+                        <h3>Throughput</h3>
+                        <div class="benchmark-value" id="throughputValue">--</div>
+                        <div class="benchmark-unit">Mbps</div>
+                        <div class="benchmark-chart" id="throughputChart"></div>
+                    </div>
+                    
+                    <div class="benchmark-card">
+                        <h3>Packets/sec</h3>
+                        <div class="benchmark-value" id="ppsValue">--</div>
+                        <div class="benchmark-unit">pps</div>
+                        <div class="benchmark-chart" id="ppsChart"></div>
+                    </div>
+                    
+                    <div class="benchmark-card">
+                        <h3>CPU Usage</h3>
+                        <div class="benchmark-value" id="cpuValue">--</div>
+                        <div class="benchmark-unit">%</div>
+                        <div class="benchmark-note">Estimated</div>
+                    </div>
+                </div>
+                
+                <div class="benchmark-actions">
+                    <button class="btn btn-primary" onclick="runBenchmark()">
+                        Run Benchmark
+                    </button>
+                </div>
+                
+                <div class="benchmark-results" id="benchmarkResults" style="display: none;">
+                    <h3>Benchmark Results</h3>
+                    <table class="results-table">
+                        <thead>
+                            <tr>
+                                <th>Metric</th>
+                                <th>Value</th>
+                                <th>Target</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="resultsBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
+
