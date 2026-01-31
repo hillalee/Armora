@@ -247,7 +247,7 @@ armora/
 
 ## License
 
-[Your license here]
+Apache
 
 ## References
 
